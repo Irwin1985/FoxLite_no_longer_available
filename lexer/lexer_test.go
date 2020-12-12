@@ -59,8 +59,6 @@ func TestTokenList(t *testing.T) {
 		}
 		if tokens[0].Literal != tt.expectedLiteral {
 			t.Fatalf("tokens[0].Literal is different. expected=%s, got=%s", tt.expectedLiteral, tokens[0].Literal)
-		} else {
-			t.Errorf("Ok -> TokenType=%v, Literal='%s'", tokens[0].Type, tokens[0].Literal)
 		}
 	}
 }
