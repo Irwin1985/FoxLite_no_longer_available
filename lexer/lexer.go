@@ -7,16 +7,14 @@ package lexer
 
 import (
 	"FoxLite/token"
-	"fmt"
-	"os"
 	"strings"
 )
 
 type Lexer struct {
 	input      string // El código fuente
-	curCharPos uint16
-	line       uint16
-	column     uint16
+	curCharPos int
+	line       int
+	column     int
 }
 
 // New Crea una instancia del Lexer
@@ -32,12 +30,12 @@ func (l *Lexer) Tokenize() []token.Token {
 	state := DEFAULT
 	var tokenStr string
 	l.line = 1
-	l.column = 1
-
+	l.column = -1
 	for index := 0; index < len(l.input); index++ {
 		chr := l.input[index]
-		l.curCharPos = uint16(index)
+		l.curCharPos = index
 		l.column += 1
+
 		switch state {
 		case DEFAULT:
 			if isLetter(chr) {
@@ -78,21 +76,38 @@ func (l *Lexer) Tokenize() []token.Token {
 			} else if chr == ';' {
 				tokens = append(tokens, l.newToken(token.SEMICOLON, ";"))
 			} else if chr == '<' {
-				tokens = append(tokens, l.getBinaryOperator(chr, token.LESS, token.LESS_EQ))
-				index++
+				tok, ok := l.getBinaryOperator(chr, token.LESS, token.LESS_EQ)
+				if ok {
+					index++
+				}
+				tokens = append(tokens, tok)
 			} else if chr == '>' {
-				tokens = append(tokens, l.getBinaryOperator(chr, token.GREATER, token.GREATER_EQ))
-				index++
+				tok, ok := l.getBinaryOperator(chr, token.GREATER, token.GREATER_EQ)
+				if ok {
+					index++
+				}
+				tokens = append(tokens, tok)
 			} else if chr == '=' {
-				tokens = append(tokens, l.getBinaryOperator(chr, token.ASSIGN, token.EQUAL))
-				index++
+				tok, ok := l.getBinaryOperator(chr, token.ASSIGN, token.EQUAL)
+				if ok {
+					index++
+				}
+				tokens = append(tokens, tok)
 			} else if chr == '!' {
-				tokens = append(tokens, l.getBinaryOperator(chr, token.BANG, token.NOT_EQ))
-				index++
+				tok, ok := l.getBinaryOperator(chr, token.BANG, token.NOT_EQ)
+				if ok {
+					index++
+				}
+				tokens = append(tokens, tok)
 			} else if chr == '\n' {
-				// Nueva linea
+				// Solo registro el primer salto de línea. El resto es ignorado.
+				if len(tokens) > 0 {
+					if tokens[len(tokens)-1].Type != token.NEWLINE {
+						tokens = append(tokens, l.newToken(token.NEWLINE, "NEW_LINE"))
+					}
+				}
 				l.line += 1
-				l.column = 1
+				l.column = 0
 			}
 		case WORD:
 			if !isLetter(chr) {
@@ -109,7 +124,7 @@ func (l *Lexer) Tokenize() []token.Token {
 			if isDigit(chr) || chr == '.' {
 				tokenStr += string(chr)
 			} else {
-				tokenType := token.INTEGER
+				var tokenType token.TokenType = token.INTEGER
 				// Verificamos el tipo de token (INTEGER ? DOUBLE ?)
 				if strings.Contains(tokenStr, ".") {
 					tokenType = token.DOUBLE
@@ -132,22 +147,24 @@ func (l *Lexer) Tokenize() []token.Token {
 				state = DEFAULT
 			}
 		default:
-			fmt.Printf("invalid token %c", chr)
-			os.Exit(1)
+			tokens = append(tokens, l.newToken(token.ILLEGAL, string(chr)))
 		}
 	}
+	tokens = append(tokens, l.newToken(token.EOF, ""))
 	return tokens
 }
 
 // getBinaryOperator analiza los operadores binarios como: '<=', '>=', '==' etc
-func (l *Lexer) getBinaryOperator(chr byte, first token.TokenType, second token.TokenType) token.Token {
+func (l *Lexer) getBinaryOperator(chr byte, first token.TokenType, second token.TokenType) (token.Token, bool) {
 	tokenType := first
 	tokenLit := string(chr)
+	advance := false
 	if l.peek() == '=' {
 		tokenType = second
 		tokenLit += "="
+		advance = true
 	}
-	return l.newToken(tokenType, tokenLit)
+	return l.newToken(tokenType, tokenLit), advance
 }
 
 // peek Muestra el siguiente caracter sin afectar la posición actual.

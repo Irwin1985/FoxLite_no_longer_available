@@ -1,3 +1,8 @@
+// repl/repl.go
+// descrip: consola de FoxLite. REPL (Read, Eval, Print, Loop)
+// creado: 12/12/2020
+// autor: Irwin R.
+// colaboradores: <none>
 package repl
 
 import (
